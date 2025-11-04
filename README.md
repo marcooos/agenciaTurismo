@@ -283,19 +283,6 @@ curl -b jar.txt -F "file=@/caminho/para/foto.jpg" \
 
 ---
 
-## Roadmap de Aula / Exercícios
-
-Sugestões para incrementar em 1h de prática:
-
-1. **Filtro de pacotes** por faixa de preço e destino (API + front).
-2. **Vendas**: adicionar status (ABERTA/FECHADA) e relatório de vendas por período.
-3. **Permissões**: tornar `DELETE` apenas para **ADMIN**.
-4. **Validações**: Bean Validation (ex.: `@NotBlank`, `@Positive`).
-5. **Excluir imagem antiga** ao trocar upload.
-6. **Deploy**: perfil `prod`, variáveis de ambiente, e volume para `uploads/`.
-
----
-
 ## Problemas comuns
 
 * **403 mesmo logado**: o usuário não tem a **role** exigida pelo endpoint; ver `@PreAuthorize`.
