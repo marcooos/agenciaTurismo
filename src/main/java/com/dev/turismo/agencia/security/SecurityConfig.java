@@ -2,6 +2,7 @@ package com.dev.turismo.agencia.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -16,6 +17,7 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 @EnableMethodSecurity // <--- habilita @PreAuthorize em controllers/services
 public class SecurityConfig {
 
+    @SuppressWarnings({ "deprecation", "removal" })
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -31,7 +33,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .logout(log -> log
-                        .logoutRequestMatcher(new AntPathRequestMatcher("/api/logout", "POST"))
+                        .logoutRequestMatcher(new AntPathRequestMatcher("/api/logout", HttpMethod.POST.name()))
                         .logoutSuccessHandler((req, res, auth) -> res.setStatus(204)));
         return http.build();
     }
