@@ -295,3 +295,254 @@ curl -b jar.txt -F "file=@/caminho/para/foto.jpg" \
 ## Licença
 
 Uso **didático**. Adapte livremente para fins educacionais e estudos.
+
+Segue um modelo de `README.md` prontinho para você colocar no GitHub do sistema da agência de turismo, explicando como publicar na AWS usando **Spring Boot + PostgreSQL (RDS) + Elastic Beanstalk**.
+
+Você pode copiar e só ajustar os nomes (app, stack, prints etc.) conforme seu projeto.
+
+---
+
+````markdown
+# 🌎 Sistema de Agência de Turismo
+
+Aplicação web desenvolvida em **Java 17 + Spring Boot 3 + Spring Data JPA + Thymeleaf + PostgreSQL**, com foco em gestão de pacotes, clientes e reservas para uma agência de turismo.
+
+Este guia explica **como publicar o sistema na AWS** usando:
+
+- **AWS Elastic Beanstalk** para hospedar a aplicação Spring Boot
+- **Amazon RDS (PostgreSQL)** como banco de dados em produção
+
+---
+
+## 🏗️ Arquitetura em Produção (AWS)
+
+- **Elastic Beanstalk (EB)**  
+  - Ambiente: Java (Corretto 17)  
+  - Deploy: arquivo `.jar` gerado pelo Maven
+
+- **Amazon RDS – PostgreSQL**
+  - Banco dedicado à aplicação
+  - Acesso restrito ao Security Group do Elastic Beanstalk
+
+- **Amazon S3 (opcional)**
+  - Para armazenar arquivos estáticos, backups etc.
+
+---
+
+## ✅ Pré-requisitos
+
+Antes de publicar:
+
+1. **Conta AWS ativa**
+2. **Usuário IAM** com permissões para:
+   - Elastic Beanstalk
+   - RDS
+   - EC2
+   - S3 (se utilizar)
+3. **AWS CLI instalado e configurado** na sua máquina  
+   ```bash
+   aws configure
+   # informe Access Key, Secret, região e formato de saída
+````
+
+4. **Java 17** instalado
+5. **Maven** instalado e configurado
+6. Projeto Spring Boot rodando localmente (por exemplo):
+
+   ```bash
+   mvn spring-boot:run
+   ```
+
+---
+
+## ⚙️ Configurações do Projeto
+
+### 1. `pom.xml`
+
+Garanta que o projeto está configurado com:
+
+* Java 17
+* Spring Boot 3.x
+* Dependências para Web, JPA e PostgreSQL
+* 
+---
+
+### 2. Configurações de Banco por Ambiente
+
+Use **variáveis de ambiente** em produção e deixe o `application.properties` preparado:
+
+```properties
+# application.properties (padrão - pode ser para DEV)
+
+spring.datasource.url=${DB_URL:jdbc:postgresql://localhost:5432/agencia}
+spring.datasource.username=${DB_USERNAME:postgres}
+spring.datasource.password=${DB_PASSWORD:postgres}
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+```
+
+Na AWS, você vai configurar `DB_URL`, `DB_USERNAME` e `DB_PASSWORD` no ambiente do Elastic Beanstalk.
+
+---
+
+## 🗄️ Criando o Banco de Dados no Amazon RDS (PostgreSQL)
+
+1. No console AWS, acesse **RDS → Databases → Create database**.
+2. Selecione:
+
+   * **Engine**: PostgreSQL
+   * **Template**: Free tier (se aplicável)
+3. Defina:
+
+   * `DB instance identifier`: `agencia-turismo-db`
+   * `Master username`: `agencia_user`
+   * `Master password`: (salve em local seguro)
+4. Em **Connectivity**:
+
+   * Escolha a VPC padrão (ou uma VPC específica, se você tiver)
+   * Defina um **Security Group** que permita acesso **apenas** do Elastic Beanstalk.
+5. Finalize a criação e aguarde o status `Available`.
+6. Anote:
+
+   * **Endpoint** (ex.: `agencia-turismo-db.xxxxxxxx.region.rds.amazonaws.com`)
+   * **Port** (padrão: 5432)
+   * **Database name** (se você definiu um na criação)
+
+Sua `DB_URL` ficará algo como:
+
+```text
+jdbc:postgresql://agencia-turismo-db.xxxxxxxx.region.rds.amazonaws.com:5432/agencia
+```
+
+---
+
+## 📦 Build da Aplicação (JAR)
+
+No diretório do projeto, gere o `.jar`:
+
+```bash
+mvn clean package -DskipTests
+```
+
+O artefato final costuma ficar em:
+
+```text
+target/agencia-turismo-0.0.1-SNAPSHOT.jar
+```
+
+Use esse arquivo no deploy.
+
+---
+
+## ☁️ Criando o Ambiente no Elastic Beanstalk
+
+1. No console AWS, acesse **Elastic Beanstalk**.
+2. Clique em **Create application**.
+3. Preencha:
+
+   * **Application name**: `agencia-turismo`
+4. Em **Platform**:
+
+   * Platform: **Java**
+   * Platform branch: **Corretto 17** (ou Java 17 equivalente)
+5. Em **Application code**:
+
+   * Escolha **Upload your code**
+   * Envie o `.jar` gerado pelo Maven
+6. Clique em **Create application** e aguarde a criação do ambiente.
+
+Ao final, você terá uma URL do tipo:
+
+```text
+http://agencia-turismo-env.XXXXXXXXXX.region.elasticbeanstalk.com
+```
+
+---
+
+## 🔐 Variáveis de Ambiente no Elastic Beanstalk
+
+Para conectar no RDS:
+
+1. Abra o ambiente criado no Elastic Beanstalk.
+
+2. Vá em **Configuration → Software** (ou “Edit” em Software).
+
+3. Em **Environment properties**, adicione:
+
+   ```text
+   DB_URL      = jdbc:postgresql://<endpoint-rds>:5432/<nome-banco>
+   DB_USERNAME = <usuario>
+   DB_PASSWORD = <senha>
+   ```
+
+4. Salve as alterações.
+   O Beanstalk fará um **redeploy** com essas variáveis.
+
+---
+
+## 🔄 Atualizando o Deploy (Novas Versões)
+
+Sempre que fizer ajustes no sistema:
+
+1. Gere um novo `.jar`:
+
+   ```bash
+   mvn clean package -DskipTests
+   ```
+2. No Elastic Beanstalk:
+
+   * Abra o ambiente
+   * Clique em **Upload and deploy**
+   * Envie o novo `.jar`
+3. Aguarde até o status ficar como **OK**.
+
+---
+
+## ✅ Checklist Rápido de Publicação
+
+1. Projeto compila localmente com `mvn clean package`
+2. Banco criado no **RDS PostgreSQL**
+3. Security Groups configurados (EB consegue acessar o RDS)
+4. Ambiente Java 17 criado no Elastic Beanstalk
+5. Variáveis de ambiente `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` configuradas
+6. Deploy do `.jar` realizado com sucesso
+7. Acesso via URL pública do Elastic Beanstalk
+
+---
+
+## 🧪 Testando em Produção
+
+* Acesse a URL do Elastic Beanstalk no navegador
+* Valide:
+
+  * Página inicial carregando
+  * Listagem de pacotes, reservas, clientes
+  * Cadastro/edição de dados
+* Verifique logs em:
+
+  * **Elastic Beanstalk → Logs**
+  * E, se necessário, via **CloudWatch Logs**
+
+---
+
+## 🛡️ Boas Práticas (Próximos Passos)
+
+* Usar **Secrets Manager** ou **SSM Parameter Store** para senhas
+* Configurar HTTPS com **AWS Certificate Manager + Load Balancer**
+* Criar **backup automático** do RDS
+* Monitorar métricas no **CloudWatch**
+* Utilizar **pipelines de CI/CD** (GitHub Actions → Elastic Beanstalk)
+
+---
+
+## 📚 Referências Úteis
+
+* Documentação Spring Boot: [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
+* Elastic Beanstalk (Java): [https://docs.aws.amazon.com/elasticbeanstalk/](https://docs.aws.amazon.com/elasticbeanstalk/)
+* Amazon RDS (PostgreSQL): [https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PostgreSQL.html](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PostgreSQL.html)
+
+---
