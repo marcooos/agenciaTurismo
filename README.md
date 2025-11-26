@@ -364,7 +364,7 @@ Garanta que o projeto está configurado com:
 * Java 17
 * Spring Boot 3.x
 * Dependências para Web, JPA e PostgreSQL
-* 
+
 ---
 
 ### 2. Configurações de Banco por Ambiente
